@@ -1,6 +1,8 @@
 import { randomBytes } from 'crypto';
 import secp256k1 from 'secp256k1';
-import SHA3 from 'keccakjs';
+import createKeccakHash from 'keccak';
+import util from 'ethjs-util';
+import BN from 'bn.js';
 
 /**
  * 私钥：secp256k1(ECDSA)生成私钥(256 bits 随机数/32位)
@@ -8,9 +10,9 @@ import SHA3 from 'keccakjs';
 function generatePrivateKey() {
     var privateKey = null;
     do {
-        privateKey =  randomBytes(32)
+        privateKey = randomBytes(32)
 
-    }while(!secp256k1.privateKeyVerify(privateKey));
+    } while (!secp256k1.privateKeyVerify(privateKey));
     return privateKey;
 }
 
@@ -29,9 +31,7 @@ function generatePublicKey(privateKey, compressed = false) {
  * @param {string} publicKey 公钥
  */
 function generateAddress(publicKey) {
-    let h = new SHA3(256);
-    h.update(publicKey.slice(1)); //去掉前缀
-    return h.digest('hex').slice(-40);
+    return createKeccakHash('keccak256').update(publicKey.slice(1)).digest('hex').slice(-40);
 }
 
 /**
@@ -48,9 +48,87 @@ function loadPrivateKeyFromHexString(hexString) {
     return new Buffer(hexString, 'hex')
 }
 
+/**
+ * 各种类型数据转buffer
+ * @param {*} v 数据
+ */
+function bufferFrom(v) {
+    if (!Buffer.isBuffer(v)) {
+        if (Array.isArray(v)) {
+            v = Buffer.from(v)
+        } else if (typeof v === 'string') {
+            if (util.isHexString(v)) {
+                v = Buffer.from(util.padToEven(util.stripHexPrefix(v)), 'hex')
+            } else {
+                v = Buffer.from(v)
+            }
+        } else if (typeof v === 'number') {
+            v = util.intToBuffer(v)
+        } else if (v === null || v === undefined) {
+            v = Buffer.allocUnsafe(0)
+        } else if (BN.isBN(v)) {
+            v = v.toArrayLike(Buffer)
+        } else if (v.toArray) {
+            // converts a BN to a Buffer
+            v = Buffer.from(v.toArray())
+        } else {
+            throw new Error('invalid type')
+        }
+    }
+    return v
+}
+
+function sign(msg, privateKeyBuffer) {
+    if (!secp256k1.privateKeyVerify(privateKey)) {
+        console.log("Invalid private key！");
+        return null;
+    }
+    let hash = createKeccakHash('keccak256').update(msg).digest();
+    let sig = secp256k1.sign(hash, privateKeyBuffer);
+    let ret = {};
+    ret.r = sig.signature.slice(0, 32);
+    ret.s = sig.signature.slice(32, 64);
+    ret.v = sig.recovery;
+    return ret;
+}
+
+function recovery(r, s, v, msg) {
+    let signature = Buffer.concat([bufferFrom(r), bufferFrom(s)], 64)
+    let recovery = v;
+    if (recovery !== 0 && recovery !== 1) {
+        throw new Error('Invalid signature v value')
+    }
+    let hash = createKeccakHash('keccak256').update(msg).digest();
+    let senderPubKey = secp256k1.recover(hash, signature, recovery);
+    return secp256k1.publicKeyConvert(senderPubKey, false);
+}
+
+function verify(msg, r, s, pubKeyBuffer) {
+    let signature = Buffer.concat([bufferFrom(r), bufferFrom(s)], 64)
+    let hash = createKeccakHash('keccak256').update(msg).digest();
+    return secp256k1.verify(hash, signature, pubKeyBuffer);
+}
+
+
+
+function signBuffer(ret) {
+    return Buffer.concat([
+        bufferFrom(ret.r),
+        bufferFrom(ret.s),
+        bufferFrom(ret.v)
+    ]);
+}
+
+
 let privateKey = loadPrivateKeyFromHexString("833e376d0894438c72a02e0e026f601894992f43bbabdccdfd92bea15ef718bb");
 let publicKey = generatePublicKey(privateKey);
+let msg = "Hello World";
+let signRet = sign(msg, privateKey);
 
-console.log(privateKey.hexSlice());
-console.log(publicKey.hexSlice());
-console.log(generateAddress(publicKey));
+console.log("私钥" + ':' + privateKey.hexSlice());
+console.log("公钥" + ":" + publicKey.hexSlice());
+console.log("地址" + ":" + generateAddress(publicKey));
+console.log("签名" + ":" + signBuffer(signRet).hexSlice());
+console.log("提取公钥" + ":" + recovery(signRet.r, signRet.s, signRet.v, msg).hexSlice());
+console.log("验签" + ":" + verify(msg, signRet.r, signRet.s, publicKey));
+
