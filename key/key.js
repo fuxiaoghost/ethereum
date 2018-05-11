@@ -85,7 +85,7 @@ function bufferFrom(v) {
  * @param {Buffer} privateKeyBuffer 私钥Buffer
  */
 function sign(msg, privateKeyBuffer) {
-    if (!secp256k1.privateKeyVerify(privateKey)) {
+    if (!secp256k1.privateKeyVerify(privateKeyBuffer)) {
         console.log("Invalid private key！");
         return null;
     }
