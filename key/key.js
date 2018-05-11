@@ -3,6 +3,7 @@ import secp256k1 from 'secp256k1';
 import createKeccakHash from 'keccak';
 import util from 'ethjs-util';
 import BN from 'bn.js';
+import EthereumTx from 'ethereumjs-tx';
 
 /**
  * 私钥：secp256k1(ECDSA)生成私钥(256 bits 随机数/32位)
@@ -142,6 +143,18 @@ function signBuffer(ret) {
     ]);
 }
 
+/**
+ * 交易签名并序列化
+ * @param {Buffer} privateKeyBuffer 私钥
+ * @param {Object} txParams 交易结构体
+ */
+function signTx(privateKeyBuffer, txParams) {
+      const tx = new EthereumTx(txParams);
+      tx.sign(privateKey);
+      const serializedTx = tx.serialize();
+      return serializedTx;
+}
+
 
 let privateKey = loadPrivateKeyFromHexString("833e376d0894438c72a02e0e026f601894992f43bbabdccdfd92bea15ef718bb");
 let publicKey = generatePublicKey(privateKey);
@@ -150,6 +163,18 @@ console.log("地址" + ":" + generateAddress(publicKey));
 let msg = "Hello World";
 let signRet = sign(msg, privateKey);
 
+let txParams = {
+    nonce: '0x19',
+    gasPrice: '0x3b9aca00',
+    gasLimit: '0x18c63',
+    to: '0xc59565465f95cd80e7317dd5a03929e6900090ff',
+    value: '0x00',
+    data: '0xb2c21c9100000000000000000000000000000000000000000000000000000000000000400000000000000000000000005902598fc6c9c85bec8452f9ba3fca2f8b226a1b000000000000000000000000000000000000000000000000000000000000000548656c6c6f000000000000000000000000000000000000000000000000000000',
+    chainId: 3
+}
+
+let serializedTx = signTx(privateKey, txParams).hexSlice();
+
 
 console.log("私钥" + ':' + privateKey.hexSlice());
 console.log("公钥" + ":" + publicKey.hexSlice());
@@ -157,4 +182,4 @@ console.log("地址" + ":" + generateAddress(publicKey));
 console.log("签名" + ":" + signBuffer(signRet).hexSlice());
 console.log("提取公钥" + ":" + recovery(signRet.r, signRet.s, signRet.v, msg).hexSlice());
 console.log("验签" + ":" + verify(msg, signRet.r, signRet.s, publicKey));
-
+console.log("交易数据" + ":" + serializedTx);
