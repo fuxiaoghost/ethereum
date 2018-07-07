@@ -27,11 +27,11 @@ function customHash(filePath) {
     // 添加tag
     let tag = Buffer.from([10])
     
-    // 添加size
+    // 添加File Size
     let size = Buffer.from([unixFs.length]);
     var newBuffer = Buffer.concat([tag, size, unixFs]);
 
-    // sha256
+    // sha2-256
     let sha256 = crypto.createHash('sha256').update(newBuffer).digest();
 
     // multihash
