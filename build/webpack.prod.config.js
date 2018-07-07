@@ -11,7 +11,7 @@ fs.readdirSync('node_modules').filter(function(x) {
 
 module.exports = Object.assign({}, base, {
     output : Object.assign({}, base.output, {
-        filename : 'key.js'
+        filename : 'ipfs.js'
     }),
     node : {
         __dirname : true
