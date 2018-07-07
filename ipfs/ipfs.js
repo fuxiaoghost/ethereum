@@ -11,9 +11,12 @@ function ipfsHash(filePath) {
     const unixFs = new Unixfs('file', buffer);
     DAGNode.create(unixFs.marshal(), (err, dagNode) => {
         let json = dagNode.toJSON();
-        console.log(dagNode.serialized);
-        console.log(dagNode.multihash);
-        console.log(json.multihash);
+        console.log("File:0x" + buffer.toString('hex'));
+        console.log("UnixFs:0x" + unixFs.marshal().toString('hex'));
+        console.log("Header+UnixFS:0x" + dagNode.serialized.toString('hex'));
+        console.log("Multihash:0x" + dagNode.multihash.toString('hex'));
+        console.log("Address:" + json.multihash);
+        console.log("---------------------------------------------------------------------");
     });
 }
 
@@ -39,9 +42,13 @@ function customHash(filePath) {
 
     // base58
     let base58 = bs58.encode(multihash).toString('hex');
-    console.log(newBuffer);
-    console.log(multihash);
-    console.log(base58);
+    console.log("File:0x" + buffer.toString('hex'));
+    console.log("UnixFs:0x" + unixFs.toString('hex'));
+    console.log("Header+UnixFS:0x" + newBuffer.toString('hex'));
+    console.log("Sha256:0x" + sha256.toString('hex'));
+    console.log("Multihash:0x" + multihash.toString('hex'));
+    console.log("Address:" + base58);
+    console.log("---------------------------------------------------------------------");
 }
 
 ipfsHash('/Users/Kirn/Documents/Workspace/Dawn/ethereum/assets/test.txt');
